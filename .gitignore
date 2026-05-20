@@ -1,0 +1,13 @@
+# Python virtual environment
+backend/.venv/
+
+# Secrets
+backend/.env
+backend/credentials/service-account.json
+
+# Python cache
+**/__pycache__/
+*.pyc
+
+# Streamlit cache
+.streamlit/
