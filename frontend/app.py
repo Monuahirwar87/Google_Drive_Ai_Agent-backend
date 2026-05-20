@@ -2,7 +2,7 @@ import requests
 import streamlit as st
 import os
 
-BACKEND_URL = os.getenv("BACKEND_URL", "http://127.0.0.1:4000")
+BACKEND_URL = os.getenv("BACKEND_URL", "https://google-drive-ai-agent-backend.onrender.com")
 print(BACKEND_URL)
 
 # Page configuration
