@@ -1,0 +1,30 @@
+/* frontend/static/style.css */
+
+/* Styling the Chat message containers */
+.stChatMessage {
+    background-color: #1E293B !important;
+    border-radius: 12px !important;
+    border: 1px solid #334155 !important;
+    padding: 15px !important;
+    margin-bottom: 10px !important;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+/* Giving the user chat bubble a distinctive accent border */
+.stChatMessage[data-testimonial="user"] {
+    background-color: #0F172A !important;
+    border-left: 4px solid #00FFA3 !important;
+}
+
+/* Main title styling */
+h1 {
+    color: #00FFA3 !important;
+    font-weight: 800 !important;
+    letter-spacing: -0.5px;
+}
+
+/* Sidebar styling to match the card theme */
+section[data-testid="stSidebar"] {
+    background-color: #0B1329 !important;
+    border-right: 1px solid #1E293B;
+}
