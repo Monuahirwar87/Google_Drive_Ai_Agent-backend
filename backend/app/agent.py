@@ -14,12 +14,23 @@ load_dotenv(ENV_PATH)
 
 
 # Convert our Python function into a LangChain tool
+# Tool 1: File Search Tool
 @tool
 def google_drive_search(keyword: str):
     """
     Search Google Drive for files related to the given keyword.
     """
     return search_drive(keyword)
+
+# 🆕 Tool 2: File Content Reader Tool (Naya Add Kiya)
+@tool
+def read_file_content(file_id: str):
+    """
+    Use this tool ONLY when the user explicitly asks to read, summarize, analyze, 
+    extract info, or ask questions FROM INSIDE a specific file's content.
+    Input MUST be a valid Google Drive File ID string.
+    """
+    return read_drive_file_content(file_id)
 
 
 # Initialize Gemini model
