@@ -16,7 +16,7 @@ if os.path.exists(css_path):
     with open(css_path) as f:
         st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
 
-# 3. Backend URL Config (Your Live Render Server URL)
+# 3. Backend Base URL Config (Bina trailing slash ya /chat ke)
 BACKEND_URL = os.getenv("BACKEND_URL", "https://google-drive-ai-agent-backend.onrender.com")
 
 # 4. Header Section UI
@@ -24,11 +24,21 @@ st.markdown("<h1>🤖 Google Drive AI Agent</h1>", unsafe_allow_html=True)
 st.markdown("<p style='color: #94A3B8; font-size: 1.1rem;'>Ask questions or search files securely inside your Google Drive folder.</p>", unsafe_allow_html=True)
 st.markdown("---")
 
-# 5. Sidebar Setup (For Information & Controls)
+# 5. Sidebar Setup (Updated with Clear Chat Button)
 with st.sidebar:
     st.markdown("<h3 style='color: #00FFA3;'>System Status</h3>", unsafe_allow_html=True)
     st.success("Connected to Render Cloud")
     
+    st.markdown("---")
+    
+    # 🆕 Clear Chat Actions
+    st.markdown("<h4 style='color: #94A3B8;'>Chat Actions</h4>", unsafe_allow_html=True)
+    if st.button("🗑️ Clear Chat History", use_container_width=True):
+        st.session_state.messages = [
+            {"role": "assistant", "content": "Hello! Chat history clear ho gayi hai. Mujhe batayein aapko Google Drive mein kya dhoondhna hai?"}
+        ]
+        st.rerun()
+
     st.markdown("---")
     st.markdown("<h4 style='color: #94A3B8;'>How to use:</h4>", unsafe_allow_html=True)
     st.write("1. Share your Drive folder with the Service Account email.")
@@ -56,8 +66,8 @@ if user_input := st.chat_input("Search your Google Drive..."):
     with st.chat_message("assistant"):
         with st.spinner("Searching files in Google Drive..."):
             try:
-                # Sending request to the live Render backend URL
-                response = requests.post(BACKEND_URL, json={"message": user_input}, timeout=60)
+                # ✏️ FIX: Humne BACKEND_URL ke aage strict "/chat" endpoint jod diya hai
+                response = requests.post(f"{BACKEND_URL}/chat", json={"message": user_input}, timeout=60)
                 
                 if response.status_code == 200:
                     ai_response = response.json().get("response", "No response text found.")
