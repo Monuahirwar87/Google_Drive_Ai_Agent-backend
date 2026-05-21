@@ -2,6 +2,7 @@
 import requests
 import streamlit as st
 import os
+import re
 
 # 1. Page Configuration (Must be at the very top of the script)
 st.set_page_config(
@@ -80,28 +81,59 @@ if user_input := st.chat_input("Search your Google Drive..."):
             if response.status_code == 200:
                 ai_response = response.json().get("response", "No response text found.")
                 
-                # 🆕 Visual Cards Logic: Check if the response looks like a file path or link
-                # Agar backend response mein 'http' ya 'drive.google.com' jaisa link aata hai
-                if "http" in ai_response and "drive.google.com" in ai_response:
-                    # Hum link aur text ko clean karke premium HTML card mein wrap kar rahe hain
-                    file_name = ai_response.split("http")[0].replace("Found file:", "").strip()
-                    file_url = "http" + ai_response.split("http")[1].strip()
+               # 🔍 Regex to find Google Drive Links from Gemini's response
+                # Format expected: [Filename](https://drive.google.com/...) or just the URL
+                markdown_link_pattern = r'\[([^\]]+)\]\((https:\/\/drive\.google\.com\/[^)]+)\)'
+                raw_url_pattern = r'(https:\/\/drive\.google\.com\/file\/d\/[^\s\)]+)'
+                
+                md_links = re.findall(markdown_link_pattern, ai_response)
+                
+                if md_links:
+                    # Agar Gemini ne [Filename](URL) format mein links diye hain
+                    # Pehle normal conversational text dikhayein bina markdown links ke
+                    clean_text = re.sub(markdown_link_pattern, '', ai_response).strip()
+                    if clean_text and not clean_text.startswith("Found"):
+                        st.markdown(clean_text)
+                        st.session_state.messages.append({"role": "assistant", "content": clean_text})
                     
-                    card_html = f"""
-                    <div class="file-card">
-                        <div>
-                            <span style='color: #94A3B8; font-size: 0.85rem; display:block;'>GOOGLE DRIVE FILE</span>
-                            <strong style='font-size: 1.1rem; color: #F8FAFC;'>📄 {file_name if file_name else "Requested Document"}</strong>
+                    # Saari files ke liye alag-alag card banayein
+                    for file_name, file_url in md_links:
+                        card_html = f"""
+                        <div class="file-card">
+                            <div>
+                                <span style='color: #94A3B8; font-size: 0.85rem; display:block;'>GOOGLE DRIVE FILE</span>
+                                <strong style='font-size: 1.05rem; color: #F8FAFC;'>📄 {file_name.strip()}</strong>
+                            </div>
+                            <div>
+                                <a href="{file_url.strip()}" target="_blank" class="file-link">🗂️ Open File</a>
+                            </div>
                         </div>
-                        <div>
-                            <a href="{file_url}" target="_blank" class="file-link">🗂️ Open File</a>
+                        """
+                        st.markdown(card_html, unsafe_allow_html=True)
+                        st.session_state.messages.append({"role": "assistant", "content": card_html, "is_html": True})
+                        
+                elif re.search(raw_url_pattern, ai_response):
+                    # Fallback: Agar sirf raw URLs mile text ke andar
+                    urls = re.findall(raw_url_pattern, ai_response)
+                    st.markdown(ai_response) # Pura text normal dikhayein
+                    st.session_state.messages.append({"role": "assistant", "content": ai_response})
+                    
+                    for url in urls:
+                        card_html = f"""
+                        <div class="file-card">
+                            <div>
+                                <span style='color: #94A3B8; font-size: 0.85rem; display:block;'>GOOGLE DRIVE FILE</span>
+                                <strong style='font-size: 1.05rem; color: #F8FAFC;'>📄 Click to view document</strong>
+                            </div>
+                            <div>
+                                <a href="{url.strip()}" target="_blank" class="file-link">🗂️ Open File</a>
+                            </div>
                         </div>
-                    </div>
-                    """
-                    st.markdown(card_html, unsafe_allow_html=True)
-                    st.session_state.messages.append({"role": "assistant", "content": card_html, "is_html": True})
+                        """
+                        st.markdown(card_html, unsafe_allow_html=True)
+                        st.session_state.messages.append({"role": "assistant", "content": card_html, "is_html": True})
                 else:
-                    # Normal conversational response text
+                    # Normal normal text response (No links found)
                     st.markdown(ai_response)
                     st.session_state.messages.append({"role": "assistant", "content": ai_response})
                     
