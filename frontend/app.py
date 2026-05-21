@@ -57,7 +57,7 @@ if user_input := st.chat_input("Search your Google Drive..."):
         with st.spinner("Searching files in Google Drive..."):
             try:
                 # Sending request to the live Render backend URL
-                response = requests.post(BACKEND_URL, json={"engine": user_input}, timeout=30)
+                response = requests.post(BACKEND_URL, json={"message": user_input}, timeout=30)
                 
                 if response.status_code == 200:
                     ai_response = response.json().get("response", "No response text found.")
