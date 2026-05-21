@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware  # 🆕 Import middleware
 from pydantic import BaseModel
 from app.agent import agent
+from app.tools import get_all_folders  
 
 # Create FastAPI application
 app = FastAPI(title="Google Drive Search Agent")
@@ -16,8 +17,10 @@ app.add_middleware(
 )
 
 # Request body schema
+# 📂 Request Model ko update kiya folder_id field ke sath
 class ChatRequest(BaseModel):
     message: str
+    folder_id: str = None
 
 
 # Response body schema
@@ -29,9 +32,23 @@ class ChatResponse(BaseModel):
 def root():
     return {"message": "Google Drive Search Agent is running!"}
 
+# 🆕 NEW ENDPOINT: Frontend ke dropdown ko folders list dene ke liye
+@app.get("/folders")
+def list_folders():
+    folders = get_all_folders()
+    return {"folders": folders}
+
 @app.post("/chat", response_model=ChatResponse)
 def chat(request: ChatRequest):
     try:
+
+        user_message = request.message
+        
+        # Agar specific folder select hai, toh system prompt ko control karne ke liye message mein inject karein
+        if request.folder_id and request.folder_id != "all_drive":
+            user_message += f" (Note: Strictly restrict your tool search parameters inside parent folder ID: {request.folder_id})"
+        
+        
         result = agent.invoke(
             {
                 "messages": [

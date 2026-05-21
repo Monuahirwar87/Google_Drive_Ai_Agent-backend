@@ -40,35 +40,68 @@ with st.sidebar:
         ]
         st.rerun()
 
-    # 🆕 VOICE COMMAND SEARCH WIDGET ADDED HERE
+   # 🆕 FEATURE 4: DYNAMIC FOLDER NAVIGATION DROPDOWN
+    st.markdown("---")
+    st.markdown("<h4 style='color: #00FFA3;'>📂 Select Search Scope</h4>", unsafe_allow_html=True)
+    
+    selected_folder_id = "all_drive"
+    try:
+        folder_response = requests.get(f"{BACKEND_URL}/folders", timeout=5)
+        if folder_response.status_code == 200:
+            folder_data = folder_response.json().get("folders", [])
+            
+            options = {"🔍 All Google Drive": "all_drive"}
+            for folder in folder_data:
+                options[f"📁 {folder['name']}"] = folder['id']
+                
+            chosen_label = st.selectbox(
+                "Filter files by specific folder:",
+                options=list(options.keys()),
+                index=0
+            )
+            selected_folder_id = options[chosen_label]
+    except Exception:
+        st.caption("⚠️ Unable to load custom folder filters. Defaulting to entire Drive search.")
+
+    # Voice Command Search Section
     st.markdown("---")
     st.markdown("<h4 style='color: #00FFA3;'>🎙️ Voice Command Search</h4>", unsafe_allow_html=True)
     st.write("Click 'Start Recording', speak your file name, then click 'Stop'.")
     
     from streamlit_mic_recorder import mic_recorder
-    
+    import speech_recognition as sr
+    import io
+
     audio_data = mic_recorder(
         start_prompt="🎵 Start Recording",
         stop_prompt="🛑 Stop & Search",
         just_once=True,
         key='voice_search_mic'
     )
-    # Agar user ne voice record karli hai aur audio data mil gaya hai
+    
     if audio_data and audio_data.get('bytes'):
         st.info("🎙️ Voice captured! Processing speech-to-text...")
-
-        # 🧪 Local testing verification audio track layout (optional)
-        # st.audio(audio_data['bytes']) 
-
-        # Note: Agle phase mein is raw audio_data['bytes'] ko hum speech-to-text API 
-        # (jaise OpenAI Whisper ya Gemini Audio Transcription) ke short URL par process karenge.
-        # Abhi ke liye hum model ko simulate karne ke liye placeholder text update kar rahe hain:
-        st.warning("Speech-to-text API module initializing. Integrate your API keys to run live transcriptions!")
+        try:
+            audio_bytes = audio_data['bytes']
+            audio_file = io.BytesIO(audio_bytes)
+            recognizer = sr.Recognizer()
+            with sr.AudioFile(audio_file) as source:
+                audio_listened = recognizer.record(source)
+                transcribed_text = recognizer.recognize_google(audio_listened)
+                
+            st.success(f"🗣️ Heard: \"{transcribed_text}\"")
+            st.session_state.voice_query = transcribed_text
+            st.button("🚀 Run Voice Search Now", use_container_width=True)
+        except sr.UnknownValueError:
+            st.error("❌ Could not understand the audio. Please speak clearly.")
+        except Exception as e:
+            st.error(f"⚠️ Error: {str(e)}")
 
     st.markdown("---")
     st.markdown("<h4 style='color: #94A3B8;'>How to use:</h4>", unsafe_allow_html=True)
     st.write("1. Share your Drive folder with the Service Account email.")
     st.write("2. Type natural questions like *'Find my project sheet'*.")
+
 
 # 6. Initialize Chat History
 if "messages" not in st.session_state:
@@ -89,9 +122,21 @@ for message in st.session_state.messages:
             with st.expander(f"👁️ Quick Preview: {message['file_name']}"):
                 st.components.v1.iframe(message["embed_url"], height=500, scrolling=True)
 
-# 8. User Input and Response Processing Logic
-if user_input := st.chat_input("Search your Google Drive..."):
-    # Display user message instantly
+# ==========================================
+# # 8. User Input and Response Processing Logic
+# ==========================================
+
+# 🎙️ VOICE & TEXT INPUT COUPLING LAYER
+# Check agar sidebar voice component se koi query aayi hai toh use primary user_input set karein
+if "voice_query" in st.session_state and st.session_state.voice_query:
+    user_input = st.session_state.voice_query
+    del st.session_state.voice_query  # State clear karein taaki rerun hone par infinite loops na banein
+else:
+    user_input = st.chat_input("Search your Google Drive...")
+
+# Main processing block starts here when input is caught
+if user_input:
+    # Display user message instantly inside chat UI
     with st.chat_message("user"):
         st.markdown(user_input)
     st.session_state.messages.append({"role": "user", "content": user_input})
@@ -102,9 +147,15 @@ if user_input := st.chat_input("Search your Google Drive..."):
         loader_placeholder.markdown('<div class="ai-pulse-loader">🤖 Agent is scanning your Google Drive cloud space...</div>', unsafe_allow_html=True)
         
         try:
+            # 📂 FEATURE 4 INTEGRATED: Dynamic payload mapping including folder filter reference ID
+            payload = {
+                "message": user_input, 
+                "folder_id": selected_folder_id
+            }
+            
             # Sending request to backend
-            response = requests.post(f"{BACKEND_URL}/chat", json={"message": user_input}, timeout=60)
-            loader_placeholder.empty() # Remove loader once data arrives
+            response = requests.post(f"{BACKEND_URL}/chat", json=payload, timeout=60)
+            loader_placeholder.empty()  # Remove loader once data arrives from server
             
             if response.status_code == 200:
                 ai_response = response.json().get("response", "No response text found.")
@@ -202,5 +253,3 @@ if user_input := st.chat_input("Search your Google Drive..."):
             ai_response = "❌ Connection Error: Backend server is not responding."
             st.markdown(ai_response)
             st.session_state.messages.append({"role": "assistant", "content": ai_response})
-
-# 🛑 Iske niche koi extra text (jaise 'add karo') nahi hona chahiye!
