@@ -28,3 +28,50 @@ section[data-testid="stSidebar"] {
     background-color: #0B1329 !important;
     border-right: 1px solid #1E293B;
 }
+/* File Card Container */
+.file-card {
+    background: linear-gradient(135deg, #1E293B 0%, #0F172A 100%) !important;
+    border: 1px solid #334155 !important;
+    border-left: 5px solid #00FFA3 !important;
+    border-radius: 10px !important;
+    padding: 15px !important;
+    margin: 10px 0px !important;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+/* File Card Link Button */
+.file-link {
+    color: #00FFA3 !important;
+    text-decoration: none !important;
+    font-weight: bold !important;
+    background: rgba(0, 255, 163, 0.1);
+    padding: 6px 12px;
+    border-radius: 6px;
+    border: 1px solid #00FFA3;
+    transition: all 0.3s ease;
+}
+
+.file-link:hover {
+    background: #00FFA3 !important;
+    color: #0F172A !important;
+    box-shadow: 0 0 10px #00FFA3;
+}
+
+/* Custom AI Pulsing Animation for Spinner */
+@keyframes pulse {
+    0% { opacity: 0.6; }
+    50% { opacity: 1; transform: scale(1.02); }
+    100% { opacity: 0.6; }
+}
+
+.ai-pulse-loader {
+    color: #00FFA3 !important;
+    font-weight: 600;
+    font-size: 1.1rem;
+    animation: pulse 1.5s infinite ease-in-out;
+    padding: 10px;
+    border-left: 3px dashed #00FFA3;
+}

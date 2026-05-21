@@ -50,10 +50,14 @@ if "messages" not in st.session_state:
         {"role": "assistant", "content": "Hello! Please tell me what file you are looking for in your Google Drive."}
     ]
 
-# 7. Display Past Messages on Screen
+# 7. Display Past Messages on Screen (Updated for HTML Cards support)
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
-        st.markdown(message["content"])
+        # Agar message ek HTML card hai toh unsafe_allow_html use karein, nahi toh normal text
+        if message.get("is_html"):
+            st.markdown(message["content"], unsafe_allow_html=True)
+        else:
+            st.markdown(message["content"])
 
 # 8. User Input and Response Processing Logic
 if user_input := st.chat_input("Search your Google Drive..."):
@@ -62,19 +66,52 @@ if user_input := st.chat_input("Search your Google Drive..."):
         st.markdown(user_input)
     st.session_state.messages.append({"role": "user", "content": user_input})
 
-    # Show a loading spinner while waiting for the API response
+    # Show a premium custom pulsing loader instead of a boring spinner
     with st.chat_message("assistant"):
-        with st.spinner("Searching files in Google Drive..."):
-            try:
-                # ✏️ FIX: Humne BACKEND_URL ke aage strict "/chat" endpoint jod diya hai
-                response = requests.post(f"{BACKEND_URL}/chat", json={"message": user_input}, timeout=60)
+        loader_placeholder = st.empty()
+        # Custom HTML pulsing text loader
+        loader_placeholder.markdown('<div class="ai-pulse-loader">🤖 Agent is scanning your Google Drive cloud space...</div>', unsafe_allow_html=True)
+        
+        try:
+            # Sending request to backend
+            response = requests.post(f"{BACKEND_URL}/chat", json={"message": user_input}, timeout=60)
+            loader_placeholder.empty() # Remove loader once data arrives
+            
+            if response.status_code == 200:
+                ai_response = response.json().get("response", "No response text found.")
                 
-                if response.status_code == 200:
-                    ai_response = response.json().get("response", "No response text found.")
+                # 🆕 Visual Cards Logic: Check if the response looks like a file path or link
+                # Agar backend response mein 'http' ya 'drive.google.com' jaisa link aata hai
+                if "http" in ai_response and "drive.google.com" in ai_response:
+                    # Hum link aur text ko clean karke premium HTML card mein wrap kar rahe hain
+                    file_name = ai_response.split("http")[0].replace("Found file:", "").strip()
+                    file_url = "http" + ai_response.split("http")[1].strip()
+                    
+                    card_html = f"""
+                    <div class="file-card">
+                        <div>
+                            <span style='color: #94A3B8; font-size: 0.85rem; display:block;'>GOOGLE DRIVE FILE</span>
+                            <strong style='font-size: 1.1rem; color: #F8FAFC;'>📄 {file_name if file_name else "Requested Document"}</strong>
+                        </div>
+                        <div>
+                            <a href="{file_url}" target="_blank" class="file-link">🗂️ Open File</a>
+                        </div>
+                    </div>
+                    """
+                    st.markdown(card_html, unsafe_allow_html=True)
+                    st.session_state.messages.append({"role": "assistant", "content": card_html, "is_html": True})
                 else:
-                    ai_response = f"⚠️ Backend Server Error: Code {response.status_code}"
-            except requests.exceptions.RequestException as e:
-                ai_response = "❌ Connection Error: The backend server is not responding. Please check if your Render service is active."
-
+                    # Normal conversational response text
+                    st.markdown(ai_response)
+                    st.session_state.messages.append({"role": "assistant", "content": ai_response})
+                    
+            else:
+                ai_response = f"⚠️ Backend Server Error: Code {response.status_code}"
+                st.markdown(ai_response)
+                st.session_state.messages.append({"role": "assistant", "content": ai_response})
+                
+        except requests.exceptions.RequestException as e:
+            loader_placeholder.empty()
+            ai_response = "❌ Connection Error: Backend server is not responding."
             st.markdown(ai_response)
             st.session_state.messages.append({"role": "assistant", "content": ai_response})
