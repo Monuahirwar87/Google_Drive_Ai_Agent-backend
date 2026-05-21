@@ -1,11 +1,19 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware  # 🆕 Import middleware
 from pydantic import BaseModel
-
 from app.agent import agent
 
 # Create FastAPI application
 app = FastAPI(title="Google Drive Search Agent")
 
+# Add CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["https://my-drive-ai-agent.streamlit.app"],  # Allow all origins (replace with specific domains in production)
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Request body schema
 class ChatRequest(BaseModel):
