@@ -6,7 +6,7 @@ from langchain.tools import tool
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langgraph.prebuilt import create_react_agent
 
-from app.tools import search_drive
+from app.tools import search_drive,read_drive_file_content
 
 # Load environment variables from backend/.env
 ENV_PATH = Path(__file__).resolve().parent.parent / ".env"
