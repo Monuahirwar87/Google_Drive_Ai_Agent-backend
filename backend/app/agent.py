@@ -1,3 +1,4 @@
+# backend/app/agent.py
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -30,8 +31,19 @@ llm = ChatGoogleGenerativeAI(
 # Register tools
 tools = [google_drive_search]
 
-# Create LangGraph ReAct agent
+# 🆕 YAHAN ADD KIYA HAI: System Instruction pure plaintext string mein
+system_instruction = """You are an advanced Google Drive AI Agent. Your job is to help users find and manage documents from their connected cloud storage.
+
+⚠️ CRITICAL INSTRUCTION FOR FILE LINKS:
+When providing a list of files found in Google Drive, you MUST format each file as a markdown link using its exact name and webViewLink/alternateLink provided by the tool. 
+Format should strictly be: [Exact_File_Name.pdf](https://drive.google.com/...) listed as bullet points. 
+
+Do not output raw plain text for filenames. Every single file mentioned must have its corresponding link attached so the frontend can build dynamic visual cards.
+"""
+
+# Create LangGraph ReAct agent 
 agent = create_react_agent(
     model=llm,
     tools=tools,
+    state_modifier=system_instruction  # ✏️ Yeh line Gemini ko strict rules follow karwayegi
 )
