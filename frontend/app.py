@@ -177,3 +177,5 @@ if user_input := st.chat_input("Search your Google Drive..."):
             ai_response = "❌ Connection Error: Backend server is not responding."
             st.markdown(ai_response)
             st.session_state.messages.append({"role": "assistant", "content": ai_response})
+
+# 🛑 Iske niche koi extra text (jaise 'add karo') nahi hona chahiye!
