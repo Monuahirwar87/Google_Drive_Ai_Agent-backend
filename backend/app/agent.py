@@ -41,9 +41,10 @@ Format should strictly be: [Exact_File_Name.pdf](https://drive.google.com/...) l
 Do not output raw plain text for filenames. Every single file mentioned must have its corresponding link attached so the frontend can build dynamic visual cards.
 """
 
-# Create LangGraph ReAct agent 
+# Create LangGraph ReAct agent
+# 🆕 Fixed: 'state_modifier' ko badal kar 'prompt' kiya taaki crash na ho
 agent = create_react_agent(
     model=llm,
     tools=tools,
-    state_modifier=system_instruction  # ✏️ Yeh line Gemini ko strict rules follow karwayegi
+    prompt=system_instruction  
 )
