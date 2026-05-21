@@ -1,6 +1,7 @@
-from fastapi import FastAPI
+from fastapi import FastAPI,HTTPException
 from fastapi.middleware.cors import CORSMiddleware  # 🆕 Import middleware
 from pydantic import BaseModel
+from pyparsing import Optional
 from app.agent import agent
 from app.tools import get_all_folders  
 
@@ -16,66 +17,28 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Request body schema
-# 📂 Request Model ko update kiya folder_id field ke sath
 class ChatRequest(BaseModel):
     message: str
-    folder_id: str = None
+    folder_id: Optional[str] = None
 
-
-# Response body schema
-class ChatResponse(BaseModel):
-    response: str
-
-
-@app.get("/")
-def root():
-    return {"message": "Google Drive Search Agent is running!"}
-
-# 🆕 NEW ENDPOINT: Frontend ke dropdown ko folders list dene ke liye
-@app.get("/folders")
-def list_folders():
-    folders = get_all_folders()
-    return {"folders": folders}
-
-@app.post("/chat", response_model=ChatResponse)
-def chat(request: ChatRequest):
+@app.post("/chat")
+async def chat_endpoint(req: ChatRequest):
     try:
-
-        user_message = request.message
-        
-        # Agar specific folder select hai, toh system prompt ko control karne ke liye message mein inject karein
-        if request.folder_id and request.folder_id != "all_drive":
-            user_message += f" (Note: Strictly restrict your tool search parameters inside parent folder ID: {request.folder_id})"
-        
-        
-        result = agent.invoke(
-            {
-                "messages": [
-                    {
-                        "role": "user",
-                        "content": request.message,
-                    }
-                ]
-            }
-        )
-
-        content = result["messages"][-1].content
-
-        if isinstance(content, str):
-            final_message = content
-        elif isinstance(content, list):
-            text_parts = []
-
-            for item in content:
-                if isinstance(item, dict) and item.get("type") == "text":
-                    text_parts.append(item.get("text", ""))
-
-            final_message = "\n".join(text_parts)
-        else:
-            final_message = str(content)
-
-        return ChatResponse(response=final_message)
-
+        # Pass folder scope parameter down safely into prompt injection structure
+        target_folder = req.folder_id if req.folder_id and req.folder_id != "None" else "all_drive"
+        response = agent.invoke({"input": req.message, "folder_id": target_folder})
+        return {"response": response.get("output", "No response generated.")}
     except Exception as e:
-        return ChatResponse(response=f"Error: {str(e)}")
+        error_msg = str(e)
+        if "429" in error_msg or "RESOURCE_EXHAUSTED" in error_msg:
+            raise HTTPException(status_code=429, detail="Gemini Rate Limit Exceeded. Please try again in 60 seconds.")
+        raise HTTPException(status_code=500, detail=error_msg)
+
+@app.get("/folders")
+async def folders_endpoint():
+    from app.tools import get_all_folders
+    try:
+        folders = get_all_folders()
+        return {"folders": folders}
+    except Exception as e:
+        return {"folders": []}
