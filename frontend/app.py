@@ -51,14 +51,18 @@ if "messages" not in st.session_state:
         {"role": "assistant", "content": "Hello! Please tell me what file you are looking for in your Google Drive."}
     ]
 
-# 7. Display Past Messages on Screen (Updated for HTML Cards support)
+# 7. Display Past Messages on Screen (Updated for HTML Cards & Preview support)
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
-        # Agar message ek HTML card hai toh unsafe_allow_html use karein, nahi toh normal text
         if message.get("is_html"):
             st.markdown(message["content"], unsafe_allow_html=True)
         else:
             st.markdown(message["content"])
+        
+        # Past session memory mein bhi expander/preview load ho sake
+        if message.get("embed_url") and message.get("file_name"):
+            with st.expander(f"👁️ Quick Preview: {message['file_name']}"):
+                st.components.v1.iframe(message["embed_url"], height=500, scrolling=True)
 
 # 8. User Input and Response Processing Logic
 if user_input := st.chat_input("Search your Google Drive..."):
@@ -70,7 +74,6 @@ if user_input := st.chat_input("Search your Google Drive..."):
     # Show a premium custom pulsing loader instead of a boring spinner
     with st.chat_message("assistant"):
         loader_placeholder = st.empty()
-        # Custom HTML pulsing text loader
         loader_placeholder.markdown('<div class="ai-pulse-loader">🤖 Agent is scanning your Google Drive cloud space...</div>', unsafe_allow_html=True)
         
         try:
@@ -81,22 +84,19 @@ if user_input := st.chat_input("Search your Google Drive..."):
             if response.status_code == 200:
                 ai_response = response.json().get("response", "No response text found.")
                 
-               # 🔍 Regex to find Google Drive Links from Gemini's response
-                # Format expected: [Filename](https://drive.google.com/...) or just the URL
+                # 🔍 Regex to find Google Drive Links from Gemini's response
                 markdown_link_pattern = r'\[([^\]]+)\]\((https:\/\/drive\.google\.com\/[^)]+)\)'
                 raw_url_pattern = r'(https:\/\/drive\.google\.com\/file\/d\/[^\s\)]+)'
                 
                 md_links = re.findall(markdown_link_pattern, ai_response)
                 
                 if md_links:
-                    # Agar Gemini ne [Filename](URL) format mein links diye hain
-                    # Pehle normal conversational text dikhayein bina markdown links ke
                     clean_text = re.sub(markdown_link_pattern, '', ai_response).strip()
                     if clean_text and not clean_text.startswith("Found"):
                         st.markdown(clean_text)
                         st.session_state.messages.append({"role": "assistant", "content": clean_text})
                     
-                    # Saari files ke liye alag-alag card banayein
+                    # Saari files ke liye alag-alag card aur preview window banayein
                     for file_name, file_url in md_links:
                         card_html = f"""
                         <div class="file-card">
@@ -110,12 +110,28 @@ if user_input := st.chat_input("Search your Google Drive..."):
                         </div>
                         """
                         st.markdown(card_html, unsafe_allow_html=True)
-                        st.session_state.messages.append({"role": "assistant", "content": card_html, "is_html": True})
+                        
+                        # Preview Configuration
+                        file_id_match = re.search(r'/d/([^/]+)', file_url)
+                        embed_url = None
+                        if file_id_match:
+                            file_id = file_id_match.group(1)
+                            embed_url = f"https://drive.google.com/file/d/{file_id}/preview"
+                            with st.expander(f"👁️ Quick Preview: {file_name.strip()}"):
+                                st.components.v1.iframe(embed_url, height=500, scrolling=True)
+                        
+                        # History State Append
+                        st.session_state.messages.append({
+                            "role": "assistant", 
+                            "content": card_html, 
+                            "is_html": True,
+                            "embed_url": embed_url,
+                            "file_name": file_name.strip()
+                        })
                         
                 elif re.search(raw_url_pattern, ai_response):
-                    # Fallback: Agar sirf raw URLs mile text ke andar
                     urls = re.findall(raw_url_pattern, ai_response)
-                    st.markdown(ai_response) # Pura text normal dikhayein
+                    st.markdown(ai_response)
                     st.session_state.messages.append({"role": "assistant", "content": ai_response})
                     
                     for url in urls:
@@ -131,9 +147,23 @@ if user_input := st.chat_input("Search your Google Drive..."):
                         </div>
                         """
                         st.markdown(card_html, unsafe_allow_html=True)
-                        st.session_state.messages.append({"role": "assistant", "content": card_html, "is_html": True})
+                        
+                        file_id_match = re.search(r'/d/([^/]+)', url)
+                        embed_url = None
+                        if file_id_match:
+                            file_id = file_id_match.group(1)
+                            embed_url = f"https://drive.google.com/file/d/{file_id}/preview"
+                            with st.expander("👁️ Quick Preview: View Document"):
+                                st.components.v1.iframe(embed_url, height=500, scrolling=True)
+                                
+                        st.session_state.messages.append({
+                            "role": "assistant", 
+                            "content": card_html, 
+                            "is_html": True,
+                            "embed_url": embed_url,
+                            "file_name": "View Document"
+                        })
                 else:
-                    # Normal normal text response (No links found)
                     st.markdown(ai_response)
                     st.session_state.messages.append({"role": "assistant", "content": ai_response})
                     
