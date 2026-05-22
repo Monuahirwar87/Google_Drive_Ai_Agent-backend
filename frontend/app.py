@@ -39,7 +39,7 @@ with st.sidebar:
     st.markdown("<h4 style='color: #94A3B8;'>Chat Actions</h4>", unsafe_allow_html=True)
     if st.button("🗑️ Clear Chat History", use_container_width=True):
         st.session_state.messages = [
-            {"role": "assistant", "content": "Hello! Chat history clear ho gayi hai. Mujhe batayein aapko Google Drive mein kya dhoondhna hai?"}
+            {"role": "assistant", "content": "Hello! Chat history has been cleared. How can I help you manage your Google Drive."}
         ]
         if "voice_query" in st.session_state:
             del st.session_state.voice_query
