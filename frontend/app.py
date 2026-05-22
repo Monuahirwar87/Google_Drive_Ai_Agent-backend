@@ -185,13 +185,15 @@ if user_input:
                 markdown_link_pattern = r'\[([^\]]+)\]\((https:\/\/drive\.google\.com\/[^)]+)\)'
                 raw_url_pattern = r'(https:\/\/drive\.google\.com\/file\/d\/[^\s\)]+)'
                 
-                # ✅ SAFE GUARD: Check if response exists and is a valid string before running regex findall
-                if ai_response and isinstance(ai_response, str):
-                    md_links = re.findall(markdown_link_pattern, ai_response)
-                else:
-                    md_links = []
-                    # Fallback assignment to prevent any further downstream string operation crashes
-                    ai_response = str(ai_response) if ai_response else "No valid response string received."
+                # 🛠️ FORCE CONVERSION TO STRING TO AVOID REGEX COMPILATION CRASH (Sureshot Protection)
+                if not isinstance(ai_response, str):
+                    if isinstance(ai_response, list) and len(ai_response) > 0 and isinstance(ai_response[0], dict):
+                        ai_response = ai_response[0].get("text", str(ai_response))
+                    else:
+                        ai_response = str(ai_response) if ai_response else "No valid response string received."
+                
+                # Now your regex execution becomes completely safe and robust against lists/objects
+                md_links = re.findall(markdown_link_pattern, ai_response)
                 
                 if md_links:
                     clean_text = re.sub(markdown_link_pattern, '', ai_response).strip()
