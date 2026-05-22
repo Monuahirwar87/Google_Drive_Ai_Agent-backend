@@ -45,29 +45,38 @@ with st.sidebar:
             del st.session_state.voice_query
         st.rerun()
 
-    # 📂 FEATURE 4: DYNAMIC FOLDER NAVIGATION DROPDOWN BINDINGS
+    # 📂 UPDATED & MERGED: CLEAN DYNAMIC FOLDER NAVIGATION DROPDOWN
     st.markdown("---")
-    st.markdown("<h4 style='color: #00FFA3;'>📂 Select Search Scope</h4>", unsafe_allow_html=True)
-    
-    selected_folder_id = "all_drive"
+    st.subheader("📂 Select Search Scope")
+
+    # Fetch folders from backend API
+    folders_list = []
     try:
-        folder_response = requests.get(f"{BACKEND_URL}/folders", timeout=5)
-        if folder_response.status_code == 200:
-            folder_data = folder_response.json().get("folders", [])
-            
-            options = {"🔍 All Google Drive": "all_drive"}
-            for folder in folder_data:
-                options[f"📁 {folder['name']}"] = folder['id']
-                
-            chosen_label = st.selectbox(
-                "Filter files by specific folder:",
-                options=list(options.keys()),
-                index=0,
-                key="folder_scope_selector"  # State key identifier bound
-            )
-            selected_folder_id = options[chosen_label]
-    except Exception:
-        st.caption("⚠️ Unable to load custom folder filters. Defaulting to entire Drive search.")
+        folder_res = requests.get(f"{BACKEND_URL}/folders", timeout=10)
+        if folder_res.status_code == 200:
+            folders_list = folder_res.json().get("folders", [])
+    except Exception as e:
+        st.sidebar.warning("⚠️ Could not connect to backend folders API.")
+
+    # Options dictionary setup (Key: "Display Name", Value: "Folder ID String")
+    folder_options = {"🔍 All Google Drive": "all_drive"}
+
+    # Populate dropdown options dictionary dynamically from API data
+    for folder in folders_list:
+        f_name = folder.get("name", "Unnamed Folder")
+        f_id = folder.get("id")
+        if f_id:
+            folder_options[f"📁 {f_name}"] = f_id
+
+    # Display the dropdown safely using dictionary keys
+    selected_display_name = st.selectbox(
+        "Filter files by specific folder:",
+        options=list(folder_options.keys()),
+        key="folder_scope_selector"
+    )
+
+    # Extract matching configuration ID string to pass down to backend payloads
+    selected_folder_id = folder_options[selected_display_name]
 
     # 🎙️ FEATURE 3: COMBINED VOICE COMMAND SEARCH PIPELINE
     st.markdown("---")
