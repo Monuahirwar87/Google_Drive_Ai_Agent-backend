@@ -51,7 +51,7 @@ def get_agent_instance():
     llm = ChatGoogleGenerativeAI(
         model="gemini-2.5-flash",
         google_api_key=gemini_key,
-        temperature=0
+        temperature=0,
         max_output_tokens=1000  # Token heavy usage control karne ke liye
     )
 
