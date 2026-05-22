@@ -9,42 +9,48 @@ from pypdf import PdfReader
 # SCOPES setup for read-only access to Google Drive
 SCOPES = ['https://www.googleapis.com/auth/drive.readonly']
 
-# 🔑 SAFE & DIRECT ENVIRONMENT VARIABLES ACCESS (Render Friendly Setup)
-raw_private_key = os.getenv("GOOGLE_PRIVATE_KEY")
-formatted_private_key = None
-
-if raw_private_key:
-    # Remove literal escaped strings and handle line breaks dynamically
-    formatted_private_key = raw_private_key.replace("\\n", "\n")
-    # Wrap with standard cryptographic markers if missing in raw string
-    if not formatted_private_key.startswith("-----BEGIN PRIVATE KEY-----"):
-        formatted_private_key = f"-----BEGIN PRIVATE KEY-----\n{formatted_private_key}\n-----END PRIVATE KEY-----"
-else:
-    print("CRITICAL WARNING: GOOGLE_PRIVATE_KEY environment variable is missing!")
-
-# Master layouts structure for Google Service Account info dictionary
-SERVICE_ACCOUNT_INFO = {
-    "type": os.getenv("GOOGLE_TYPE", "service_account"),
-    "project_id": os.getenv("GOOGLE_PROJECT_ID"),
-    "private_key_id": os.getenv("GOOGLE_PRIVATE_KEY_ID"),
-    "private_key": formatted_private_key,
-    "client_email": os.getenv("GOOGLE_CLIENT_EMAIL"),
-    "client_id": os.getenv("GOOGLE_CLIENT_ID"),
-    "auth_uri": os.getenv("GOOGLE_AUTH_URI", "https://accounts.google.com/o/oauth2/auth"),
-    "token_uri": os.getenv("GOOGLE_TOKEN_URI", "https://oauth2.googleapis.com/token"),
-    "auth_provider_x509_cert_url": os.getenv("GOOGLE_AUTH_PROVIDER_X509_CERT_URL", "https://www.googleapis.com/oauth2/v1/certs"),
-    "client_x509_cert_url": os.getenv("GOOGLE_CLIENT_X509_CERT_URL"),
-    "universe_domain": os.getenv("GOOGLE_UNIVERSE_DOMAIN", "googleapis.com")
-}
-
-
 def get_google_creds():
     """
     Dynamically yields credentials avoiding initialization freeze frames or stale states.
+    Reads latest configurations directly at request runtime.
     """
     try:
-        if formatted_private_key and SERVICE_ACCOUNT_INFO["client_email"]:
-            return Credentials.from_service_account_info(SERVICE_ACCOUNT_INFO, scopes=SCOPES)
+        # 🔑 Safety Check: Read from primary names OR alternate dashboard fallbacks
+        raw_private_key = os.getenv("GOOGLE_PRIVATE_KEY") or os.getenv("PRIVATE_KEY") or ""
+        client_email = os.getenv("GOOGLE_CLIENT_EMAIL") or os.getenv("GOOGLE_CLIENT_ID") or ""
+        
+        if not raw_private_key:
+            print("CRITICAL WARNING: Neither GOOGLE_PRIVATE_KEY nor PRIVATE_KEY is set!")
+            return None
+
+        # Remove literal escaped strings and handle line breaks dynamically
+        if "\\n" in raw_private_key:
+            formatted_private_key = raw_private_key.replace("\\n", "\n")
+        else:
+            formatted_private_key = raw_private_key
+
+        # Wrap with standard cryptographic markers if missing in raw string
+        if formatted_private_key and not formatted_private_key.startswith("-----BEGIN PRIVATE KEY-----"):
+            formatted_private_key = f"-----BEGIN PRIVATE KEY-----\n{formatted_private_key}\n-----END PRIVATE KEY-----\n"
+
+        # Master layouts structure built dynamically inside the frame runtime execution
+        service_account_info = {
+            "type": os.getenv("GOOGLE_TYPE", "service_account"),
+            "project_id": os.getenv("GOOGLE_PROJECT_ID"),
+            "private_key_id": os.getenv("GOOGLE_PRIVATE_KEY_ID"),
+            "private_key": formatted_private_key,
+            "client_email": client_email,
+            "client_id": os.getenv("GOOGLE_CLIENT_ID") or "",
+            "auth_uri": os.getenv("GOOGLE_AUTH_URI", "https://accounts.google.com/o/oauth2/auth"),
+            "token_uri": os.getenv("GOOGLE_TOKEN_URI", "https://oauth2.googleapis.com/token"),
+            "auth_provider_x509_cert_url": os.getenv("GOOGLE_AUTH_PROVIDER_X509_CERT_URL", "https://www.googleapis.com/oauth2/v1/certs"),
+            "client_x509_cert_url": os.getenv("GOOGLE_CLIENT_X509_CERT_URL"),
+            "universe_domain": os.getenv("GOOGLE_UNIVERSE_DOMAIN", "googleapis.com")
+        }
+
+        if formatted_private_key and client_email:
+            return Credentials.from_service_account_info(service_account_info, scopes=SCOPES)
+            
     except Exception as e:
         print(f"Credentials dynamic execution setup warning: {e}")
     return None
@@ -57,7 +63,7 @@ def search_drive(query: str, folder_id: str = None):
     """
     creds = get_google_creds()
     if not creds:
-        return "Error: Google Credentials not initialized properly."
+        return "Error: Google Drive credentials have not been initialized properly. Please check your Render configuration environment parameters."
     try:
         service = build('drive', 'v3', credentials=creds)
         
@@ -80,16 +86,13 @@ def search_drive(query: str, folder_id: str = None):
 
 def get_all_folders():
     """
-    Fetches all available folders from the connected Google Drive directory,
-    including sub-folders shared with or inside the root directory visibility scope.
+    Fetches all available folders from the connected Google Drive directory.
     """
     creds = get_google_creds()
     if not creds:
         return []
     try:
         service = build('drive', 'v3', credentials=creds)
-        
-        # Super Query Matrix: Targets child nodes inside nested folder environments
         query = "mimeType = 'application/vnd.google-apps.folder' and trashed = false"
         
         results = service.files().list(
@@ -105,11 +108,11 @@ def get_all_folders():
 
 def read_drive_file_content(file_id: str) -> str:
     """
-    Google Drive API se file (PDF ya Text) ka raw content download karke uska plain text extract karta hai.
+    Downloads raw content from Google Drive and extracts plain text (supports PDFs and Text files).
     """
     creds = get_google_creds()
     if not creds:
-        return "Error: Google Credentials not initialized."
+        return "Error: Google Credentials not initialized properly."
     try:
         service = build('drive', 'v3', credentials=creds)
         
