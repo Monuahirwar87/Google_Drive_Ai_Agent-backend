@@ -6,10 +6,11 @@ from langchain.tools import tool
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langgraph.prebuilt import create_react_agent
 
-# Load environment variables safely (Local testing fallback ke liye)
-ENV_PATH = Path(__file__).resolve().parent.parent / ".env"
-if ENV_PATH.exists():
-    load_dotenv(ENV_PATH)
+# ✅ Safe conditional loading: Load .env ONLY during local development
+if not os.getenv("RENDER"):  # Render automatically sets this variable
+    ENV_PATH = Path(__file__).resolve().parent.parent / ".env"
+    if ENV_PATH.exists():
+        load_dotenv(ENV_PATH)
 
 # =====================================================================
 # 🎯 LAZY INITIALIZATION FUNCTION (Prevents Render Boot Crashes)
