@@ -70,9 +70,25 @@ If a user query comes in, you must prioritize scanning within the provided sessi
 # 🎯 LANGGRAPH REACT AGENT CREATION
 # =====================================================================
 
-# Using state_modifier string to append system instructions cleanly
-agent = create_react_agent(
-    model=llm,
-    tools=tools,
-    prompt=system_instruction  # Fixed prompt string config mapping
-)
+# =====================================================================
+# 🎯 LAZY INITIALIZATION FUNCTION (Prevents Import-Time Crash)
+# =====================================================================
+def get_agent_instance():
+    """Dynamically creates the agent only when called inside the router."""
+    gemini_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
+    
+    # Secure fallback string to completely bypass Pydantic static boot validation check
+    if not gemini_key:
+        gemini_key = "placeholder_key_to_prevent_pydantic_crash"
+        
+    llm = ChatGoogleGenerativeAI(
+        model="gemini-2.5-flash",
+        google_api_key=gemini_key,
+        temperature=0
+    )
+    
+    return create_react_agent(
+        model=llm,
+        tools=tools,
+        prompt=system_instruction
+    )
