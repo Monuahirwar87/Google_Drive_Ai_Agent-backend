@@ -62,7 +62,7 @@ def get_agent_instance():
     system_instruction = """You are an advanced Google Drive AI Agent. Your job is to help users find, manage, and analyze documents from their connected cloud storage.
 
     ⚠️ CRITICAL INSTRUCTION FOR FILE LINKS (Feature 1 & 2):
-    When providing a list of files found in Google Drive, you MUST format each file as a markdown link using its exact name and webViewLink/alternateLink provided by the tool. 
+    When providing a list of files found in Google Drive, you MUST format each file as a markdown link using its exact name and webViewLink provided by the tool. 
     Format should strictly be: [Exact_File_Name.pdf](https://drive.google.com/...) listed as bullet points. 
 
     Do not output raw plain text for filenames. Every single file mentioned must have its corresponding link attached so the frontend can build dynamic visual cards and iframe previews.

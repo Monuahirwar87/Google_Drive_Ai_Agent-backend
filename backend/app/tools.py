@@ -76,10 +76,10 @@ def search_drive(query: str, folder_id: str = None):
             
         results = service.files().list(
             q=q_string,
-            fields="files(id, name, webViewLink, alternateLink, mimeType)",
+            fields="nextPageToken, files(id, name, webViewLink, mimeType)",
             pageSize=10
         ).execute()
-        return results.get('files', [])
+        return results.get('files,', [])
     except Exception as e:
         return f"Error searching drive: {str(e)}"
 
