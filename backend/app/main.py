@@ -13,7 +13,7 @@ app = FastAPI(title="Google Drive AI Agent Backend")
 # CORS Middleware for Frontend-Backend Communication
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://my-drive-ai-agent.streamlit.app"],
+    allow_origins=["https://drive-power-ai-agent.streamlit.app/"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
