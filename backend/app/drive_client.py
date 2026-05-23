@@ -75,7 +75,7 @@ def search_files(query: str, page_size: int = 20):
         .list(
             q=query,
             pageSize=page_size,
-            fields="files(id, name, mimeType, webViewLink, modifiedTime)",
+            fields="nextPageToken, files(id, name, mimeType, webViewLink, modifiedTime)",
         )
         .execute()
     )
